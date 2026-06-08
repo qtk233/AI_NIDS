@@ -9,7 +9,7 @@ class PayloadEncoder(nn.Module):
                  dropout: float = 0.1):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
-        self.pos_encoding = PositionalEncoding(d_model, max_len=max_len, dropout=dropout)
+        self.pos_encoding = PositionalEncoding(d_model, max_len=max_len + 1, dropout=dropout)  # +1 for CLS token
         self.cls_token = nn.Parameter(torch.randn(1, 1, d_model))
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model, nhead=n_heads, dim_feedforward=ffn_dim,

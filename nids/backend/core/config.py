@@ -10,8 +10,7 @@ class Settings(BaseSettings):
     max_pcap_size_mb: int = 2048
     ws_cache_size: int = 200
 
-    class Config:
-        env_file = ".env"
+    model_config = {"env_file": ".env"}
 
 
 settings = Settings()
