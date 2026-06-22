@@ -27,3 +27,9 @@ test-results/
 
 # Sensitive files
 MySQL*
+
+# Large data files (not tracked)
+data/
+processed/
+checkpoints/
+experiments/

@@ -8,10 +8,7 @@ NIDS (Network Intrusion Detection System) — deep learning-based network intrus
 
 ## Repository Layout
 
-The `nids/` directory is the monorepo root. Everything (backend, frontend, data, checkpoints) lives under it. The top-level `.env`, `reasonix.toml`, and `headroom_ai-*.whl` are not part of the application.
-
 ```
-nids/
 ├── backend/           # FastAPI + PyTorch backend
 │   ├── main.py        # FastAPI app entry point (CORS, routers, exception handlers)
 │   ├── core/          # config (pydantic-settings), database (async SQLAlchemy), exceptions
@@ -51,7 +48,6 @@ Wrapper: `NIDSModel` composes StatEncoder + PayloadEncoder + fusion into a singl
 ### Backend (Python/FastAPI)
 
 ```bash
-cd nids
 source venv/Scripts/activate    # Windows
 # source venv/bin/activate      # Linux/Mac
 
@@ -77,7 +73,7 @@ python train.py --stat processed/train_stat.pt --payload processed/train_payload
 ### Frontend (React/TypeScript)
 
 ```bash
-cd nids/frontend
+cd frontend
 
 # Install dependencies
 npm install
@@ -102,12 +98,12 @@ npx playwright test test_navigation.spec.ts
 
 ```bash
 # Initialize MySQL schema
-mysql -u root -p < nids/init_db.sql
+mysql -u root -p < init_db.sql
 ```
 
 ## Environment Configuration
 
-Copy `nids/.env.example` to `nids/backend/.env` (pydantic-settings reads `.env` from the working directory):
+Copy `.env.example` to `.env` (pydantic-settings reads `.env` from the working directory):
 
 | Variable | Default | Notes |
 |---|---|---|
@@ -143,14 +139,14 @@ All endpoints follow a uniform envelope: `{success: boolean, data: T | null, err
 
 ## Testing
 
-- **Backend unit tests:** `nids/backend/tests/unit/` — model layers, config, dataset, metrics, preprocessing
-- **Backend integration tests:** `nids/backend/tests/integration/` — API endpoints via httpx, WebSocket, full pipeline
-- **Frontend E2E tests:** `nids/frontend/e2e/` — Playwright tests for dashboard, navigation, live detection
+- **Backend unit tests:** `backend/tests/unit/` — model layers, config, dataset, metrics, preprocessing
+- **Backend integration tests:** `backend/tests/integration/` — API endpoints via httpx, WebSocket, full pipeline
+- **Frontend E2E tests:** `frontend/e2e/` — Playwright tests for dashboard, navigation, live detection
 - Fixtures in `conftest.py` provide a small `NIDSModel` and `Detector` instance for tests
 
 ## Key Patterns
 
-- **Backend imports use the `backend.` prefix** (e.g., `from backend.models.nids_model import NIDSModel`) — Python path is set from the `nids/` directory
+- **Backend imports use the `backend.` prefix** (e.g., `from backend.models.nids_model import NIDSModel`) — Python path is set from the project root directory
 - **Async SQLAlchemy** throughout — all DB operations use `AsyncSession` with `async_sessionmaker`
 - **Frontend API client** (`lib/api.ts`) wraps fetch with a generic `request<T>()` helper; all responses are typed as `ApiResponse<T>`
 - **Tailwind CSS 4** with the Vite plugin (not PostCSS config)
