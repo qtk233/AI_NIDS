@@ -1,4 +1,8 @@
 import { useCallback } from "react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend
+} from "recharts";
 import { api } from "../lib/api";
 import { useApi } from "../hooks/useApi";
 
@@ -8,12 +12,19 @@ interface ModelInfo {
   inference_time_ms: number;
 }
 
+interface RocCurve {
+  class: string;
+  auc: number;
+  points: Array<{ fpr: number; tpr: number }>;
+}
+
 interface ModelMetrics {
   accuracy: number;
   macro_f1: number;
   weighted_f1: number;
   confusion_matrix: number[][];
   class_names: string[];
+  roc_curves: RocCurve[];
 }
 
 export default function ModelManagement() {
@@ -90,7 +101,35 @@ export default function ModelManagement() {
         </div>
         <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
           <h3 className="text-slate-400 text-xs mb-3">📊 ROC 曲线</h3>
-          <p className="text-slate-500 text-sm">训练完成后加载 ROC 曲线数据</p>
+          {displayMetrics.roc_curves && displayMetrics.roc_curves.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                <XAxis dataKey="fpr" stroke="#666" tick={{ fontSize: 10 }}
+                  label={{ value: "FPR", position: "insideBottom", offset: -5, fill: "#666", fontSize: 10 }}
+                />
+                <YAxis dataKey="tpr" stroke="#666" tick={{ fontSize: 10 }} domain={[0, 1]}
+                  label={{ value: "TPR", angle: -90, position: "insideLeft", fill: "#666", fontSize: 10 }}
+                />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" data={[{ fpr: 0, tpr: 0 }, { fpr: 1, tpr: 1 }]}
+                  dataKey="tpr" stroke="#444" strokeDasharray="4 4" name="Random" dot={false} />
+                {displayMetrics.roc_curves.map((curve, i) => (
+                  <Line key={curve.class} type="monotone"
+                    data={curve.points}
+                    dataKey="tpr"
+                    name={`${curve.class} (AUC=${curve.auc.toFixed(3)})`}
+                    stroke={["#2ecc71", "#e94560", "#f0c060"][i % 3]}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-slate-500 text-sm">训练完成后加载 ROC 曲线数据</p>
+          )}
         </div>
       </div>
     </div>

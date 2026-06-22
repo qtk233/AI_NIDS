@@ -36,8 +36,8 @@ def main():
     train_ds = NIDSDataset(args.stat, args.payload, args.labels)
     val_ds = NIDSDataset(args.val_stat, args.val_payload, args.val_labels)
 
-    train_dl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
-    val_dl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=2)
+    train_dl = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    val_dl = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
     print(f"Train samples: {len(train_ds)}, Val samples: {len(val_ds)}")
 
@@ -80,7 +80,7 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
     )
 
-    trainer.fit(train_dl, val_dl, epochs=args.epochs)
+    trainer.fit(train_dl, val_dl, epochs=args.epochs, use_mlflow=not args.no_mlflow)
     print(f"Training complete. Best model saved to {args.checkpoint_dir}/best.pt")
 
 

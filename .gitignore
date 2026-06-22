@@ -7,3 +7,23 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .superpowers/
+
+# Environment files
+.env
+**/.env
+
+# Database files
+*.db
+
+# Coverage
+.coverage
+
+# Test results
+test-results/
+
+# IDE / personal config
+.claude/
+.codegraph/
+
+# Sensitive files
+MySQL*

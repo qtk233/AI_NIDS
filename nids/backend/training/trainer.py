@@ -56,12 +56,16 @@ class Trainer:
         metrics["loss"] = total_loss / len(dataloader)
         return metrics
 
-    def fit(self, train_dl: DataLoader, val_dl: DataLoader, epochs: int = 100):
+    def fit(self, train_dl: DataLoader, val_dl: DataLoader, epochs: int = 100,
+            use_mlflow: bool = True):
         for epoch in range(1, epochs + 1):
             train_m = self.train_epoch(train_dl)
             val_m = self.validate_epoch(val_dl)
-            mlflow.log_metrics({f"train_{k}": v for k, v in train_m.items()}, step=epoch)
-            mlflow.log_metrics({f"val_{k}": v for k, v in val_m.items()}, step=epoch)
+            print(f"Epoch {epoch:3d} | train_loss={train_m['loss']:.4f} acc={train_m['accuracy']:.4f} "
+                  f"| val_loss={val_m['loss']:.4f} acc={val_m['accuracy']:.4f} f1={val_m['macro_f1']:.4f}")
+            if use_mlflow:
+                mlflow.log_metrics({f"train_{k}": v for k, v in train_m.items()}, step=epoch)
+                mlflow.log_metrics({f"val_{k}": v for k, v in val_m.items()}, step=epoch)
             if val_m["macro_f1"] > self.best_val_f1:
                 self.best_val_f1 = val_m["macro_f1"]
                 self.best_epoch = epoch

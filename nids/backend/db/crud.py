@@ -12,6 +12,14 @@ async def create_detection_log(db: AsyncSession, data: dict) -> DetectionLog:
     return log
 
 
+async def create_detection_logs_batch(db: AsyncSession, records: list[dict]) -> list[DetectionLog]:
+    """Batch insert detection logs in a single transaction."""
+    logs = [DetectionLog(id=str(uuid.uuid4()), **r) for r in records]
+    db.add_all(logs)
+    await db.commit()
+    return logs
+
+
 async def get_alerts(
     db: AsyncSession,
     page: int = 1,

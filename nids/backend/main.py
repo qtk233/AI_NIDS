@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,7 +7,26 @@ from backend.core.config import settings
 from backend.core.exceptions import ModelNotLoadedError, InvalidPcapError
 from backend.api import system, detect, alerts, model, ws
 
-app = FastAPI(title="NIDS API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: load model
+    detect.detector = detect.init_detector()
+
+    # Startup: traffic simulator
+    sim_task = asyncio.create_task(ws.run_simulator(interval=3.0))
+
+    yield
+
+    # Shutdown
+    sim_task.cancel()
+    try:
+        await sim_task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="NIDS API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

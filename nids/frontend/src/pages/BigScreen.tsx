@@ -30,51 +30,94 @@ function Counter({ value, label }: CounterProps) {
   );
 }
 
+interface TopoNode {
+  id: string;
+  traffic: number;
+}
+
+interface TopoLink {
+  source: string;
+  target: string;
+  attack: string;
+  count: number;
+}
+
 export default function BigScreen() {
   const svgRef = useRef<SVGSVGElement>(null);
-  const fetcher = useCallback(() => api.getStats(), []);
-  const { data: stats } = useApi<SystemStats>(fetcher);
+
+  const statsFetcher = useCallback(() => api.getStats(), []);
+  const topoFetcher = useCallback(() => api.getTopology(), []);
+  const { data: stats } = useApi<SystemStats>(statsFetcher);
+  const { data: topo } = useApi<{ nodes: TopoNode[]; links: TopoLink[] }>(topoFetcher);
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !topo) return;
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const nodes = [
-      { id: "Internet", x: 50, y: 140 },
-      { id: "Router", x: 160, y: 80 },
-      { id: "Firewall", x: 160, y: 200 },
-      { id: "Server", x: 300, y: 60 },
-      { id: "DB", x: 300, y: 140 },
-      { id: "Workstation", x: 300, y: 220 },
-    ];
-    const links: Array<{ source: string; target: string }> = [
-      { source: "Internet", target: "Router" },
-      { source: "Internet", target: "Firewall" },
-      { source: "Router", target: "Server" },
-      { source: "Firewall", target: "DB" },
-      { source: "Router", target: "Workstation" },
-    ];
+    const nodes = topo.nodes;
+    const links = topo.links;
 
+    if (nodes.length === 0) {
+      svg.append("text")
+        .attr("x", 200).attr("y", 140)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#64748b").attr("font-size", "12")
+        .text("等待检测数据...");
+      return;
+    }
+
+    // Layout: circle for nodes < 12, grid otherwise
+    const w = 400, h = 280;
+    if (nodes.length <= 12) {
+      const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 30;
+      nodes.forEach((n, i) => {
+        const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
+        (n as TopoNode & { x: number; y: number }).x = cx + r * Math.cos(angle);
+        (n as TopoNode & { x: number; y: number }).y = cy + r * Math.sin(angle);
+      });
+    } else {
+      const cols = Math.ceil(Math.sqrt(nodes.length));
+      nodes.forEach((n, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        (n as TopoNode & { x: number; y: number }).x = 40 + (w - 80) * (col / (cols - 1 || 1));
+        (n as TopoNode & { x: number; y: number }).y = 30 + (h - 60) * (row / (Math.ceil(nodes.length / cols) - 1 || 1));
+      });
+    }
+
+    const typedNodes = nodes as (TopoNode & { x: number; y: number })[];
+
+    // Node size based on traffic
+    const maxTraffic = Math.max(...nodes.map((n) => n.traffic), 1);
+    const nodeRadius = (n: TopoNode) => 6 + (n.traffic / maxTraffic) * 16;
+
+    // Links
     svg.selectAll("line").data(links).enter()
       .append("line")
-      .attr("x1", (d) => nodes.find((n) => n.id === d.source)!.x)
-      .attr("y1", (d) => nodes.find((n) => n.id === d.source)!.y)
-      .attr("x2", (d) => nodes.find((n) => n.id === d.target)!.x)
-      .attr("y2", (d) => nodes.find((n) => n.id === d.target)!.y)
-      .attr("stroke", "#334155").attr("stroke-width", 2);
+      .attr("x1", (d) => typedNodes.find((n) => n.id === d.source)?.x ?? 0)
+      .attr("y1", (d) => typedNodes.find((n) => n.id === d.source)?.y ?? 0)
+      .attr("x2", (d) => typedNodes.find((n) => n.id === d.target)?.x ?? 0)
+      .attr("y2", (d) => typedNodes.find((n) => n.id === d.target)?.y ?? 0)
+      .attr("stroke", (d) => d.attack === "Normal" ? "#334155" : "#e94560")
+      .attr("stroke-width", (d) => Math.max(1, Math.log2(d.count + 1)))
+      .attr("opacity", 0.5);
 
-    svg.selectAll("circle").data(nodes).enter()
+    // Nodes
+    svg.selectAll("circle").data(typedNodes).enter()
       .append("circle")
-      .attr("cx", (d) => d.x).attr("cy", (d) => d.y).attr("r", 18)
-      .attr("fill", (d) => d.id === "Internet" ? "#e94560" : "#5dade2");
+      .attr("cx", (d) => d.x).attr("cy", (d) => d.y)
+      .attr("r", (d) => nodeRadius(d))
+      .attr("fill", (d) => d.traffic > maxTraffic * 0.5 ? "#e94560" : "#5dade2")
+      .attr("opacity", 0.9);
 
-    svg.selectAll("text").data(nodes).enter()
+    // Labels
+    svg.selectAll("text").data(typedNodes).enter()
       .append("text")
-      .attr("x", (d) => d.x).attr("y", (d) => d.y + 30)
-      .attr("text-anchor", "middle").attr("fill", "#94a3b8").attr("font-size", "10")
-      .text((d) => d.id);
-  }, []);
+      .attr("x", (d) => d.x).attr("y", (d) => d.y + nodeRadius(d) + 12)
+      .attr("text-anchor", "middle").attr("fill", "#94a3b8").attr("font-size", "9")
+      .text((d) => d.id.length > 15 ? d.id.slice(0, 13) + ".." : d.id);
+  }, [topo]);
 
   return (
     <div className="p-6" style={{ fontFamily: "'Orbitron', monospace" }}>
@@ -92,7 +135,7 @@ export default function BigScreen() {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <h3 className="text-slate-400 text-xs mb-2">🌐 攻击路径拓扑</h3>
+          <h3 className="text-slate-400 text-xs mb-2">🌐 实时攻击路径拓扑</h3>
           <svg ref={svgRef} width={400} height={280} className="bg-slate-900 rounded-xl border border-slate-800" />
         </div>
         <div>

@@ -11,20 +11,24 @@ import { StatCard } from "../components/StatCard";
 
 const COLORS = ["#2ecc71", "#e94560", "#f0c060", "#5dade2", "#9b59b6", "#e67e22", "#1abc9c", "#e74c3c"];
 
-const trendData = [
+const FALLBACK_TREND = [
   { hour: "00:00", attacks: 12 }, { hour: "04:00", attacks: 8 },
   { hour: "08:00", attacks: 35 }, { hour: "12:00", attacks: 67 },
   { hour: "16:00", attacks: 45 }, { hour: "20:00", attacks: 28 },
 ];
 
 export default function Dashboard() {
-  const fetcher = useCallback(() => api.getStats(), []);
-  const { data: stats, loading, error } = useApi<SystemStats>(fetcher);
+  const statsFetcher = useCallback(() => api.getStats(), []);
+  const trendsFetcher = useCallback(() => api.getTrends(), []);
+  const { data: stats, loading, error } = useApi<SystemStats>(statsFetcher);
+  const { data: trendsData } = useApi<Array<{ hour: string; attacks: number }>>(trendsFetcher);
 
   const displayStats = stats || {
     total_detections: 0, total_alerts: 0, accuracy: 0, detection_rate: 0,
     attack_distribution: {},
   };
+
+  const displayTrends = (trendsData && trendsData.length > 0) ? trendsData : FALLBACK_TREND;
 
   const pieData = Object.entries(displayStats.attack_distribution).map(
     ([name, value]) => ({ name, value })
@@ -55,7 +59,7 @@ export default function Dashboard() {
         <div className="col-span-2 bg-slate-900 rounded-xl p-4 border border-slate-800">
           <h3 className="text-white text-sm mb-4">近 24h 检测趋势</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={trendData}>
+            <LineChart data={displayTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="hour" stroke="#666" />
               <YAxis stroke="#666" />

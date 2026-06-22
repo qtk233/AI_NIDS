@@ -14,6 +14,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   getStats: () => request<ApiResponse<SystemStats>>("/api/system/stats"),
 
+  getTrends: () => request<ApiResponse<Array<{ hour: string; attacks: number; total: number }>>>("/api/system/trends"),
+
+  getTopology: () => request<ApiResponse<{
+    nodes: Array<{ id: string; traffic: number }>;
+    links: Array<{ source: string; target: string; attack: string; count: number }>;
+  }>>("/api/system/topology"),
+
   getAlerts: (page = 1, limit = 50, search?: string) => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (search) params.set("search", search);
@@ -44,4 +51,12 @@ export const api = {
       method: "POST",
       body: body ? JSON.stringify(body) : undefined,
     }),
+
+  explainAlert: (alertId: string) =>
+    request<{
+      shap_values: Array<{ feature: string; value: number; importance: number }>;
+      attention: Array<{ layer: number; weights: number[][][] }>;
+      prediction: string;
+      confidence: number;
+    }>(`/api/alerts/${alertId}/explain`),
 };

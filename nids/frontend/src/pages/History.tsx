@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import type { AlertItem } from "../lib/types";
 
+const BASE_URL = "http://127.0.0.1:8000";
+
 export default function History() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [page, setPage] = useState(1);
@@ -21,21 +23,37 @@ export default function History() {
     fetchAlerts();
   }, [fetchAlerts]);
 
+  const handleExportCsv = () => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    window.open(`${BASE_URL}/api/alerts/export/csv?${params}`, "_blank");
+  };
+
+  const handleExportPdf = () => {
+    window.print();
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-white mb-6">📜 历史记录</h1>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 no-print">
         <input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           placeholder="🔍 搜索 IP..."
           className="flex-1 px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-slate-500"
         />
-        <button className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-sm">
+        <button
+          onClick={handleExportCsv}
+          className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-sm"
+        >
           📥 CSV
         </button>
-        <button className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-sm">
+        <button
+          onClick={handleExportPdf}
+          className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-sm"
+        >
           📄 PDF
         </button>
       </div>
